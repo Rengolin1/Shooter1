@@ -84,10 +84,11 @@ class Enemy(GameSprite):
         self.rect.y += self.speed
 
 
-        if self.rect.y >= WINDOW_HEIGHT or sprite.collide_rect(self, player):
+        if self.rect.y >= WINDOW_HEIGHT or sprite.spritecollide(self, (player,), False):
             LOST += 1
             pass_sound.play()
             self.kill()
+
 
 class Bullet(GameSprite):
     def update(self):
@@ -95,12 +96,26 @@ class Bullet(GameSprite):
 
         self.rect.y -= self.speed
 
+
         if self.rect.y <= 0:
             self.kill()
 
         if sprite.spritecollide(self, enemys_group, True):
             KILLS += 1
             exp_sound.play()
+            self.kill()
+
+class Bonus(GameSprite): 
+    def update(self):
+        global KILLS
+
+        self.rect.y += self.speed
+
+
+        if sprite.collide_rect(self, player):
+            KILLS += 1
+            pass_sound.play()
+
             self.kill()
 
 bg = GameSprite(img="bg.jpg",
@@ -113,8 +128,16 @@ player = Player(img="player.png",
                 size=(96, 64),
                 speed=7)
 
+bonus = Bonus(img="particle1.png",
+                position=(100, 10),
+                size=(10, 10),
+                speed=7)
+    
+bonuses_group = sprite.Group()
 enemys_group = sprite.Group()
 bullets_group = sprite.Group()
+bonuss_spawn_delay = FPS * 0.10
+bonuss_spawn_timer = bonuss_spawn_delay
 enemys_spawn_delay = FPS * 0.25
 enemys_spawn_timer = enemys_spawn_delay
 
@@ -124,8 +147,11 @@ while GAME_RUN:
         if ev.type == QUIT:
             GAME_RUN = False
 
+    keys = key.get_pressed()
+
     bg.reset()
     player.reset()
+    bonuses_group.draw(WINDOW)
     enemys_group.draw(WINDOW)
     bullets_group.draw(WINDOW)
 
@@ -152,18 +178,41 @@ while GAME_RUN:
                               position=(randint(100, WINDOW_WIDTH - 100), -100),
                               size=(96, 64),
                               speed=randint(2, 7))
+
             enemys_group.add(new_enemy)
             enemys_spawn_timer = enemys_spawn_delay
+
+    if not GAME_FINISHED:
+        if bonuss_spawn_timer > 0:
+            bonuss_spawn_timer -= 0.1
+        else:
+            new_bonus = Bonus(img="particle1.png",
+                              position=(randint(100, WINDOW_WIDTH - 100), -100),
+                              size=(10, 10),
+                              speed=randint(2, 7))
+            
+            bonuses_group.add(new_bonus)
+            bonuss_spawn_timer = bonuss_spawn_delay
 
     player.update()
     enemys_group.update()
     bullets_group.update()
+    bonuses_group.update()
         
     kills_text = score_font.render("Убито:" + str(KILLS), True, (255, 255, 255))
     lost_text = score_font.render("Пропущено:" + str(LOST), True, (255, 255, 255))
+    fps_text = score_font.render("FPS:" + str(float(CLOCK.get_fps())), True, (255, 255, 255))
+    posithion_text = score_font.render("Player: X:" + str(player.rect.x) + " Y:" + str(player.rect.y), True, (255, 255, 255))
+    posithion_bullet_text = score_font.render("Bullets" + str(bullets_group), True, (255, 255, 255)) 
 
-    WINDOW.blit(kills_text, (5, 5))
-    WINDOW.blit(lost_text, (5, 37))
+    if keys[K_1]:
+        WINDOW.blit(fps_text, (10, 10))
+        WINDOW.blit(posithion_text, (10, 33))
+        WINDOW.blit(posithion_bullet_text, (10, 60))
+    else:
+        WINDOW.blit(kills_text, (5, 5))
+        WINDOW.blit(lost_text, (5, 37))
 
     display.update()
     CLOCK.tick(FPS)
+
